@@ -52,3 +52,18 @@ As we are training only on a subset of dataset (150 patients out of 950), the da
 All the model’s basic architecture and configuration related to Explainability AI is also present in this file only. (Will explain architecture and explainability AI later when we will talk about their standalone file).
 
 We also used dynamic learning rate starting from 1e-4 with a weight decay of 1e-5 and can go to minimum of 1e-6.
+
+### dataset.py
+
+This is data foundation file which will handle preprocessing of data for all the models. It imports necessary functions from config.py.
+
+First, it ensures that the main root directory where all the patient folders are stored. It checks whether all the patient folder contains all 4 modalities and 1 segmentation file and if any case missed any of the file, it would skip that patient. 
+
+After that it will create splits.json, If not created, else it will import it from the disk only. As it has a fixed seed value, train-val-test split will not change in long run. Then functions like load_nifti loads .nii.gz file and passes to load_case in which they force a particular order of image and label where order of channels in image is [t1n, t1c, t2w, t2f] and float32 array of shape in image is (4, D, H, W). Similarly in labels, raw integer labels are in form of [0, 1, 2, 3] and int8 array of shape (D, H, W). 
+
+Going forward, we will normalize only non-zero voxels by Z-Score because mean and standard deviation calculated over non-zero voxels will exclude the large zero background, otherwise if we will apply normalization on whole channel, large zero background will make mean and standard deviation biased towards zero. This is one of our learning in this journey.
+
+Conversion of labels to 3-channel binary mask is also necessary. If image is small, pad_or_crop function will pad it with zeros and if its larger, then just simply perform center-crop. Channels and everything will remain same except the spatial dimensions which will be now equal to target size. Performing lightweight augmentation including random flip and random intensity scale where each channel is multiplied by small scaler. 
+
+Data loaders of train, val and test will also be created in this file only. Final image dimensions will be [4, 128, 128, 128] and label dimensions will be [3, 128, 128, 128].
+
