@@ -67,3 +67,49 @@ Conversion of labels to 3-channel binary mask is also necessary. If image is sma
 
 Data loaders of train, val and test will also be created in this file only. Final image dimensions will be [4, 128, 128, 128] and label dimensions will be [3, 128, 128, 128].
 
+### train_nnunet.py
+nnUNet is one of the strongest model earlier used in research and often used as baseline in research nowadays and it controls everything from preprocessing, naming, training etc.
+
+#### Architecture Discussion:
+
+nnUNet does not invent a completely new neural network architecture. Its name literally means "No New U-Net" and it takes the classic U-Net and makes it extremely powerful by automatically configuring everything around it.
+
+At its heart, it uses 3D U-Net as shown below. 
+<img width="468" height="235" alt="image" src="https://github.com/user-attachments/assets/d335e91f-2d9c-4d93-b769-5dce7f449efd" />
+
+
+A 1×1×1 convolution that maps to the number of output channels. In our case,  nnUNet uses region-based training where it predicts overlapping binary masks for WT, TC and ET.
+
+Skip Connections are the magic of U-Net as they allow high-resolution details from the encoder to flow directly to the decoder, which is crucial for precise tumor boundary segmentation.
+
+A slight difference which is that in original UNet structure, we use ReLU whereas in nnUNet we use Leaky ReLU.
+<img width="468" height="225" alt="image" src="https://github.com/user-attachments/assets/e47eeaab-cc55-4406-9d8f-0baeee463ddd" />
+
+ 
+For 3D datasets like BraTS, nnUNet typically plans these:
+- 3d_fullres: The main one we are using, full resolution 3D U-Net.
+- 3d_lowres + 3d_cascade_fullres: A two-stage cascade (means going from low-res coarse prediction to full-res refinement). Often skipped for BraTS because the fullres patch already covers enough context.
+- 2d: Slice-by-slice 2D U-Net.
+
+In our pipeline, we are training only 3d_fullres on fold 0.
+
+#### High Level Flow:
+
+- Step 1: Convert to nnUNet raw format (imagesTr/labelsTr/imagesTs)
+- Step 2: Plan + Preprocess (fingerprint + experiment planning)
+- Step 3: Train (with live tqdm + custom trainer)
+- Step 4: Export best checkpoint + plans to your unified CHECKPOINT_DIR\
+
+It reuses the split we created inside dataset.py and uses its own approach to train the model. It creates three environment variables namely:
+1.	nnUNet_raw -> It keeps the original raw dataset here in its custom format which it accepts (tr -> training and ts -> testing).
+2.	nnUNet_preprocessed -> nnUNet preprocess the dataset on its own. It applies best patch size, batch size, data augmentation, resampling, normalization, cropping etc. and stores the information in nnUNetPlans.json
+3.	nnUNet_results -> This is where nnUNet stores all the results like best and latest checkpoints, train and val loss graph, logs etc.
+
+Originally nnUNet is imported from MONAI library and trained on 5 folds and 1000 epochs but here with wrapper we are training it on only one fold (0th fold) with 140 epochs.
+
+We force the same modalities, labels, dataset split, regions here which we introduced in config.py and dataset.py file. All the training is done by running shell commands. 
+
+We can continue the training by extracting the epochs from logs which we stored.
+
+Careful handling of best checkpoints and logs is necessary because these things will be used later in evaluation (evaluate.py) and explainability ai (xai.py)
+
