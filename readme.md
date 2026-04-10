@@ -75,6 +75,7 @@ nnUNet is one of the strongest model earlier used in research and often used as 
 nnUNet does not invent a completely new neural network architecture. Its name literally means "No New U-Net" and it takes the classic U-Net and makes it extremely powerful by automatically configuring everything around it.
 
 At its heart, it uses 3D U-Net as shown below. 
+
 <img width="468" height="235" alt="image" src="https://github.com/user-attachments/assets/d335e91f-2d9c-4d93-b769-5dce7f449efd" />
 
 
@@ -83,6 +84,7 @@ A 1×1×1 convolution that maps to the number of output channels. In our case,  
 Skip Connections are the magic of U-Net as they allow high-resolution details from the encoder to flow directly to the decoder, which is crucial for precise tumor boundary segmentation.
 
 A slight difference which is that in original UNet structure, we use ReLU whereas in nnUNet we use Leaky ReLU.
+
 <img width="468" height="225" alt="image" src="https://github.com/user-attachments/assets/e47eeaab-cc55-4406-9d8f-0baeee463ddd" />
 
  
